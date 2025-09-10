@@ -268,11 +268,11 @@ export default function AgroFlowDashboard() {
             </h1>
             <p className="text-gray-600">
               Smart Irrigation System - Device: {deviceId}
-              {status?.last_seen && (
+              {/* {status?.last_seen && (
                 <span className="ml-2 text-sm">
                   • Last seen: {formatTimeAgo(status.last_seen)}
                 </span>
-              )}
+              )} */}
             </p>
           </div>
           <div className="flex items-center gap-3">
