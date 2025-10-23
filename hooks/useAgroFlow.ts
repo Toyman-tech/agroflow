@@ -1,7 +1,7 @@
 // hooks/useAgroFlow.ts
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { initializeApp, getApps } from 'firebase/app'
-import { getDatabase, ref, onValue, off, get, query, orderByChild, limitToLast } from 'firebase/database'
+import { getDatabase, ref, onValue, off, get, query, orderByChild, limitToLast, set, push } from 'firebase/database'
 import { getFirestore, collection, query as firestoreQuery, orderBy, limit, getDocs, where, Timestamp } from 'firebase/firestore'
 
 // Firebase configuration from environment variables
@@ -111,6 +111,7 @@ interface UseAgroFlowDataReturn {
   connected: boolean
   lastUpdate: string | null
   refreshData: () => void
+  controlPump: (action: 'ON' | 'OFF') => Promise<boolean>
 }
 
 export const useAgroFlowData = (deviceId: string = 'AF001'): UseAgroFlowDataReturn => {
@@ -329,6 +330,29 @@ export const useAgroFlowData = (deviceId: string = 'AF001'): UseAgroFlowDataRetu
     return cleanup
   }, [deviceId, setupRealTimeListeners, refreshData, cleanup])
 
+  // Pump control function
+  const controlPump = useCallback(async (action: 'ON' | 'OFF'): Promise<boolean> => {
+    try {
+      console.log(`Sending pump ${action} command to device ${deviceId}`)
+
+      // Send command to Firebase RTDB - ESP32 should listen to this path
+      const commandRef = ref(database, `commands/${deviceId}/pump_control`)
+      const commandData = {
+        action,
+        timestamp: new Date().toISOString(),
+        source: 'dashboard'
+      }
+
+      await set(commandRef, commandData)
+      console.log(`Pump ${action} command sent successfully`)
+      return true
+    } catch (err) {
+      console.error('Error controlling pump:', err)
+      setError(`Failed to control pump: ${err}`)
+      return false
+    }
+  }, [deviceId])
+
   // Auto-refresh historical data every 5 minutes
   useEffect(() => {
     const interval = setInterval(() => {
@@ -349,7 +373,8 @@ export const useAgroFlowData = (deviceId: string = 'AF001'): UseAgroFlowDataRetu
     error,
     connected,
     lastUpdate,
-    refreshData
+    refreshData,
+    controlPump
   }
 }
 

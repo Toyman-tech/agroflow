@@ -148,6 +148,7 @@ export default function AgroFlowDashboard() {
   const [deviceId, setDeviceId] = useState('AF001') // Default device ID
   const [selectedTimeRange, setSelectedTimeRange] = useState('24h')
   const [showRawData, setShowRawData] = useState(false)
+  const [pumpControlLoading, setPumpControlLoading] = useState(false)
   
   const {
     currentData,
@@ -158,7 +159,8 @@ export default function AgroFlowDashboard() {
     error,
     connected,
     lastUpdate,
-    refreshData
+    refreshData,
+    controlPump
   } = useAgroFlowData(deviceId)
 
   // Helper functions for new data format
@@ -236,6 +238,28 @@ export default function AgroFlowDashboard() {
   // Cast currentData to LiveData type
   const liveData: LiveData = currentData as LiveData
   const status: DeviceStatus = deviceStatus as DeviceStatus
+
+  // Pump control handler
+  const handlePumpControl = async () => {
+    if (!liveData) return
+
+    setPumpControlLoading(true)
+    try {
+      // Toggle pump state - if currently active (ON), turn OFF, else turn ON
+      const newState = liveData.pump_active ? 'OFF' : 'ON'
+      const success = await controlPump(newState)
+
+      if (success) {
+        console.log(`Pump ${newState} command sent successfully`)
+      } else {
+        console.error('Failed to send pump control command')
+      }
+    } catch (error) {
+      console.error('Error controlling pump:', error)
+    } finally {
+      setPumpControlLoading(false)
+    }
+  }
 
   // Error State
   if (error) {
@@ -403,11 +427,11 @@ export default function AgroFlowDashboard() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="sensors">Sensors</TabsTrigger>
-            <TabsTrigger value="irrigation">Irrigation</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            {/* <TabsTrigger value="irrigation">Irrigation</TabsTrigger> */}
+            {/* <TabsTrigger value="analytics">Analytics</TabsTrigger> */}
             <TabsTrigger value="system">System</TabsTrigger>
           </TabsList>
 
@@ -467,10 +491,16 @@ export default function AgroFlowDashboard() {
                             WiFi: {getWifiStrength(liveData.wifi_signal).strength} ({liveData.wifi_signal} dBm)
                           </span>
                         </div>
-                        <Badge variant={liveData.pump_active ? "destructive" : "default"}>
-                          <Power className="w-3 h-3 mr-1" />
-                          Pump {liveData.pump_state}
-                        </Badge>
+                        <Button
+                          variant={liveData.pump_active ? "destructive" : "default"}
+                          size="sm"
+                          onClick={handlePumpControl}
+                          disabled={pumpControlLoading}
+                          className="flex items-center gap-1"
+                        >
+                          <Power className="w-3 h-3" />
+                          {pumpControlLoading ? 'Sending...' : `Pump ${liveData.pump_state}`}
+                        </Button>
                       </div>
                       
                       <div className="pt-2 border-t space-y-2">
@@ -644,9 +674,9 @@ export default function AgroFlowDashboard() {
                             <p className="text-sm text-muted-foreground">Air temperature & humidity</p>
                           </div>
                         </div>
-                        <Badge variant={liveData.sensor_status.dht_working ? "default" : "destructive"}>
+                        {/* <Badge variant={liveData.sensor_status.dht_working ? "default" : "destructive"}>
                           {liveData.sensor_status.dht_working ? "Online" : "Offline"}
-                        </Badge>
+                        </Badge> */}
                       </div>
 
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -657,9 +687,9 @@ export default function AgroFlowDashboard() {
                             <p className="text-sm text-muted-foreground">Soil temperature</p>
                           </div>
                         </div>
-                        <Badge variant={liveData.sensor_status.ds18b20_working ? "default" : "destructive"}>
+                        {/* <Badge variant={liveData.sensor_status.ds18b20_working ? "default" : "destructive"}>
                           {liveData.sensor_status.ds18b20_working ? "Online" : "Offline"}
-                        </Badge>
+                        </Badge> */}
                       </div>
 
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -670,9 +700,9 @@ export default function AgroFlowDashboard() {
                             <p className="text-sm text-muted-foreground">3-layer soil monitoring</p>
                           </div>
                         </div>
-                        <Badge variant={liveData.sensor_status.moisture_working ? "default" : "destructive"}>
+                        {/* <Badge variant={liveData.sensor_status.moisture_working ? "default" : "destructive"}>
                           {liveData.sensor_status.moisture_working ? "Online" : "Offline"}
-                        </Badge>
+                        </Badge> */}
                       </div>
                     </div>
                   ) : (
